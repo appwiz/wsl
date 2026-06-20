@@ -14,6 +14,7 @@ Abstract:
 
 #include "precomp.h"
 #include "WslCoreInstance.h"
+#include "wslpolicies.h"
 
 WslCoreInstance::WslCoreInstance(
     _In_ HANDLE UserToken,
@@ -212,6 +213,20 @@ void WslCoreInstance::CreateLxProcess(
     if (m_configuration.RunOOBE && CreateProcessData.Filename.empty() && CreateProcessData.CommandLine.empty())
     {
         WI_SetFlag(message->Common.Flags, LxInitCreateProcessFlagAllowOOBE);
+    }
+
+    // Enforce the AllowRootAccess policy. When root access is disabled by the administrator,
+    // mark the launch so that init refuses to start the session as root (UID 0). The OOBE
+    // provisioning launch flagged above is intentionally left exempt so the initial non-root
+    // user can be created; this also leaves WSL's own internal privileged operations (which do
+    // not go through this user-facing create-process path) unaffected.
+    if (!WI_IsFlagSet(message->Common.Flags, LxInitCreateProcessFlagAllowOOBE))
+    {
+        const auto policyKey = wsl::windows::policies::OpenPoliciesKey();
+        if (!wsl::windows::policies::IsFeatureAllowed(policyKey.get(), wsl::windows::policies::c_allowRootAccess))
+        {
+            WI_SetFlag(message->Common.Flags, LxInitCreateProcessFlagBlockRoot);
+        }
     }
 
     // Create a session leader if needed.

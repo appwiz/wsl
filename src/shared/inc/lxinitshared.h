@@ -1046,6 +1046,7 @@ typedef enum _LX_INIT_CREATE_PROCESS_FLAGS
     LxInitCreateProcessFlagsElevated = 0x8,
     LxInitCreateProcessFlagsInteropEnabled = 0x10,
     LxInitCreateProcessFlagAllowOOBE = 0x20,
+    LxInitCreateProcessFlagBlockRoot = 0x40,
 } LX_INIT_CREATE_PROCESS_FLAGS,
     *PLX_INIT_CREATE_PROCESS_FLAGS;
 

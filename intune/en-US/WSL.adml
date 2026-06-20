@@ -16,6 +16,9 @@
         <string id="AllowWSL1"><!-- _locComment_text='{Locked="WSL1"}' -->Allow WSL1</string>
         <string id="AllowWSL1Explain"><!-- _locComment_text='{Locked="WSL1"}{Locked="WSL2"}' -->When set to disabled, this policy disables WSL1. When disabled, only WSL2 distributions can be used.</string>
 
+        <string id="AllowRootAccess"><!-- _locComment_text='{Locked="WSL"}' -->Allow running WSL as root</string>
+        <string id="AllowRootAccessExplain"><!-- _locComment_text='{Locked="WSL"}{Locked="root"}{Locked="sudo"}{Locked="su"}{Locked="wsl.exe"}{Locked="Store WSL"}' -->When set to disabled, this policy prevents WSL from starting a session as the root user. This blocks "wsl.exe --user root", any user name that resolves to UID 0, and distributions whose default user is root; such launches fail with a policy error. This does NOT disable "sudo" or "su" inside a running distribution, and it does not apply to first-run setup (OOBE), which must create the initial user. This policy only applies to Store WSL (WSL2).</string>
+
         <string id="CustomKernelUserSettingConfigurable">Allow custom kernel configuration</string>
         <string id="CustomKernelExplain"><!-- _locComment_text='{Locked=".wslconfig"}{Locked="wsl2.kernel"}{Locked="Store WSL"}' -->When set to disabled, this policy disables custom kernel configuration via .wslconfig (wsl2.kernel). This policy only applies to Store WSL.</string>
 

@@ -1008,6 +1008,25 @@ try
     Parsed->ShellOptions = static_cast<CREATE_PROCESS_SHELL_OPTIONS>(Common->ShellOptions);
     Parsed->Uid = PasswordEntry ? PasswordEntry->pw_uid : ROOT_UID; // If the default user was not found, fall back to root.
     Parsed->AllowOOBE = WI_IsFlagSet(Common->Flags, LxInitCreateProcessFlagAllowOOBE);
+
+    //
+    // Enforce the AllowRootAccess policy. When the service marks this launch with
+    // LxInitCreateProcessFlagBlockRoot, WSL must not start the session as root. This check is
+    // performed after the UID has been resolved so it covers every path that yields UID 0:
+    // an explicit `--user root`, a user name that resolves to UID 0, a root default user
+    // (registry DefaultUid or /etc/wsl.conf), and the fall back to root above.
+    //
+    // The OOBE provisioning launch is intentionally exempt so the initial non-root user can
+    // still be created. Returning -1 fails only this process launch (the caller surfaces the
+    // failure to the client); it does not tear down init.
+    //
+
+    if (Parsed->Uid == ROOT_UID && WI_IsFlagSet(Common->Flags, LxInitCreateProcessFlagBlockRoot) && !Parsed->AllowOOBE)
+    {
+        EMIT_USER_WARNING(wsl::shared::Localization::MessageRootAccessDisabledByPolicy());
+        return -1;
+    }
+
     return 0;
 }
 CATCH_RETURN_ERRNO()
