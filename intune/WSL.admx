@@ -195,5 +195,15 @@
       </elements>
     </policy>
 
+    <policy name="AllowRootAccess" class="Machine" displayName="$(string.AllowRootAccess)" explainText="$(string.AllowRootAccessExplain)" key="Software\Policies\WSL" valueName="AllowRootAccess">
+      <parentCategory ref="WSL" />
+      <supportedOn ref="windows:SUPPORTED_Windows10" />
+      <enabledValue>
+        <decimal value="1" />
+      </enabledValue>
+      <disabledValue>
+        <decimal value="0" />
+      </disabledValue>
+    </policy>
   </policies>
 </policyDefinitions>

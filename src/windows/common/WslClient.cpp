@@ -14,6 +14,7 @@ Abstract:
 
 #include "precomp.h"
 #include "install.h"
+#include "wslpolicies.h"
 #include "WslInstall.h"
 #include "HandleConsoleProgressBar.h"
 #include "Distribution.h"
@@ -920,8 +921,13 @@ int Manage(_In_ std::wstring_view commandLine)
     {
         auto wslExe = wil::GetModuleFileNameW<std::wstring>(wil::GetModuleInstanceHandle());
 
+        // Resolve the requested user name to a UID by running `id -u` inside the distribution.
+        // This intentionally does not force `-u root`: `id -u <name>` returns the same value
+        // regardless of which user runs it, and forcing a root session here would be rejected
+        // when the AllowRootAccess policy is enabled, which would otherwise break the ability
+        // to set a (non-root) default user.
         auto commandLine = std::format(
-            L"\"{}\" {} -u root /usr/bin/id -u -- '{}'",
+            L"\"{}\" {} /usr/bin/id -u -- '{}'",
             wslExe,
             wsl::shared::string::GuidToString<wchar_t>(distroGuid),
             defaultUser.value());
@@ -943,6 +949,17 @@ int Manage(_In_ std::wstring_view commandLine)
         auto newUid = std::wcstoul(result.Stdout.c_str(), &endPtr, 10);
 
         THROW_HR_IF(HRESULT_FROM_WIN32(ERROR_INVALID_DATA), endPtr != result.Stdout.c_str() + result.Stdout.size());
+
+        // Refuse to persist a root (UID 0) default user when the AllowRootAccess policy is
+        // disabled. The authoritative enforcement is in init (which blocks the launch), but
+        // rejecting it here gives a clear error and avoids leaving the distribution in a state
+        // where its default user can never start a session.
+        if (newUid == 0 &&
+            !wsl::windows::policies::IsFeatureAllowed(
+                wsl::windows::policies::OpenPoliciesKey().get(), wsl::windows::policies::c_allowRootAccess))
+        {
+            THROW_HR_WITH_USER_ERROR(E_ACCESSDENIED, wsl::shared::Localization::MessageRootAccessDisabledByPolicy());
+        }
 
         service.ConfigureDistribution(&distroGuid, newUid, LXSS_DISTRO_FLAGS_UNCHANGED);
     }

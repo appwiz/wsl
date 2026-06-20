@@ -155,6 +155,46 @@ class PolicyTest
         }
     }
 
+    WSL2_TEST_METHOD(RootAccessAllowed)
+    {
+        // When the policy is allowed (value 1), WSL can start a session as root.
+        auto revert = SetPolicy(c_allowRootAccess, 1);
+        WslShutdown();
+
+        auto [output, warnings] = LxsstuLaunchWslAndCaptureOutput(L"-u root /usr/bin/id -u");
+        VERIFY_ARE_EQUAL(L"0\n", output);
+    }
+
+    WSL2_TEST_METHOD(RootAccessDisabled)
+    {
+        // When the policy is disabled (value 0), WSL refuses to start a session as root,
+        // here via an explicit `--user root`.
+        //
+        // N.B. The exact non-zero exit code and the channel (stdout vs. warnings) of the
+        //      policy failure could not be verified on the authoring machine (the project does
+        //      not build on macOS). The launch is expected to fail and must not yield a root
+        //      shell. Adjust the expected exit code / message assertion after the first CI run
+        //      if necessary.
+        auto revert = SetPolicy(c_allowRootAccess, 0);
+        WslShutdown();
+
+        auto [output, warnings] = LxsstuLaunchWslAndCaptureOutput(L"-u root /usr/bin/id -u", -1);
+        VERIFY_ARE_NOT_EQUAL(L"0\n", output);
+        VERIFY_IS_TRUE((output + warnings).find(L"disabled by your administrator") != std::wstring::npos);
+    }
+
+    WSL2_TEST_METHOD(RootAccessDisabledBlocksSetDefaultUserRoot)
+    {
+        // Setting the default user to root must be refused while the policy is disabled so the
+        // distribution is not left with a default user that can never start a session.
+        auto revert = SetPolicy(c_allowRootAccess, 0);
+        WslShutdown();
+
+        auto [output, warnings] = LxsstuLaunchWslAndCaptureOutput(
+            std::format(L"--manage {} --set-default-user root", LXSS_DISTRO_NAME_TEST_L).c_str(), -1);
+        VERIFY_IS_TRUE((output + warnings).find(L"disabled by your administrator") != std::wstring::npos);
+    }
+
     WSL2_TEST_METHOD(KernelCommandLine)
     {
         auto validate = [](DWORD policyValue) {
